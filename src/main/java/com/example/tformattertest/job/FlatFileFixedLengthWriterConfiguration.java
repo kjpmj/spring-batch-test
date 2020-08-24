@@ -2,24 +2,21 @@ package com.example.tformattertest.job;
 
 import com.example.tformattertest.domain.Member;
 import com.example.tformattertest.domain.Pay;
-import com.example.tformattertest.domain.Player;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
-import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.database.JpaPagingItemReader;
 import org.springframework.batch.item.database.builder.JpaPagingItemReaderBuilder;
 import org.springframework.batch.item.file.FlatFileItemWriter;
 import org.springframework.batch.item.file.builder.FlatFileItemWriterBuilder;
+import org.springframework.batch.item.file.mapping.BeanWrapperFieldSetMapper;
 import org.springframework.batch.item.file.transform.BeanWrapperFieldExtractor;
-import org.springframework.batch.item.file.transform.DelimitedLineAggregator;
-import org.springframework.batch.item.file.transform.PassThroughLineAggregator;
+import org.springframework.batch.item.file.transform.FormatterLineAggregator;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.FileSystemResource;
 
 import javax.persistence.EntityManagerFactory;
@@ -27,12 +24,12 @@ import javax.persistence.EntityManagerFactory;
 @Slf4j
 @RequiredArgsConstructor
 @Configuration
-public class FlatFileDelimeterWriterConfiguration {
+public class FlatFileFixedLengthWriterConfiguration {
     private final JobBuilderFactory jobBuilderFactory;
     private final StepBuilderFactory stepBuilderFactory;
     private final EntityManagerFactory emf;
 
-    private static final String JOB_NAME = "flatFileDelimiterWriterJob";
+    private static final String JOB_NAME = "flatFileFixedLengthWriterJob";
     private static final String BEAN_PREFIX = JOB_NAME + "_";
     private static final int CHUNK_SIZE = 1000;
 
@@ -64,35 +61,19 @@ public class FlatFileDelimeterWriterConfiguration {
 
     @Bean(BEAN_PREFIX + "writer")
     public FlatFileItemWriter<Member> writer() {
-//        BeanWrapperFieldExtractor<Pay> fieldExtractor = new BeanWrapperFieldExtractor<>();
-//        fieldExtractor.setNames(new String[] {"id", "amount", "txName", "txDateTime"});
-//
-//        DelimitedLineAggregator<Pay> lineAggregator = new DelimitedLineAggregator<>();
-//        lineAggregator.setDelimiter(",");
-//        lineAggregator.setFieldExtractor(fieldExtractor);
-//
-//        return new FlatFileItemWriterBuilder<Pay>()
-//                .name(BEAN_PREFIX + "writer")
-//                .resource(new FileSystemResource("target/test-outputs/output.csv"))
-//                .lineAggregator(lineAggregator)
-//                .build();
+        BeanWrapperFieldExtractor<Member> fieldExtractor = new BeanWrapperFieldExtractor<>();
+        fieldExtractor.setNames(new String[] {"id", "name"});
+        fieldExtractor.afterPropertiesSet();
+
+        FormatterLineAggregator<Member> lineAggregator = new FormatterLineAggregator<>();
+        lineAggregator.setFormat("%-10s%-10s");
+        lineAggregator.setFieldExtractor(fieldExtractor);
 
         return new FlatFileItemWriterBuilder<Member>()
                 .name(BEAN_PREFIX + "writer")
-                .resource(new FileSystemResource("output/pay.csv"))
-                .lineAggregator(new DelimitedLineAggregator<>())
-                .delimited()
-                .names("mbrNo", "id", "name")
+                .resource(new FileSystemResource("output/member.txt"))
+                .lineAggregator(lineAggregator)
                 .build();
     }
-
-//    @Bean
-//    public ItemWriter<Pay> writer() {
-//        return items -> {
-//            for(Pay pay: items) {
-//                log.info(">>>>>> Pay={}", pay);
-//            }
-//        };
-//    }
 
 }
